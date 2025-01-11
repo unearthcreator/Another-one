@@ -5,6 +5,10 @@ import 'package:map_mvp_project/repositories/local_worlds_repository.dart';
 import 'package:map_mvp_project/models/world_config.dart';
 import 'package:map_mvp_project/repositories/local_app_preferences.dart';
 import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/widgets/toggle_row.dart';
+import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/widgets/back_button.dart';
+import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/widgets/world_name_input_field.dart';
+import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/widgets/theme_dropdown.dart';
+import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/widgets/theme_preview.dart';
 
 class EarthCreatorPage extends StatefulWidget {
   final int carouselIndex;
@@ -50,45 +54,9 @@ class _EarthCreatorPageState extends State<EarthCreatorPage> {
 
   String get _themeImagePath {
     final bracket = _currentBracket;
-    switch (bracket) {
-      case 'Dawn':
-        return _isSatellite
-            ? 'assets/earth_snapshot/Satellite-Dawn.png'
-            : 'assets/earth_snapshot/Dawn.png';
-      case 'Day':
-        return _isSatellite
-            ? 'assets/earth_snapshot/Satellite-Day.png'
-            : 'assets/earth_snapshot/Day.png';
-      case 'Dusk':
-        return _isSatellite
-            ? 'assets/earth_snapshot/Satellite-Dusk.png'
-            : 'assets/earth_snapshot/Dusk.png';
-      case 'Night':
-        return _isSatellite
-            ? 'assets/earth_snapshot/Satellite-Night.png'
-            : 'assets/earth_snapshot/Night.png';
-      default:
-        logger.w('Unknown bracket: $bracket. Using default "Day".');
-        return 'assets/earth_snapshot/Day.png';
-    }
-  }
-
-  void _showNameErrorDialog() {
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Invalid Title'),
-          content: const Text('World Name must be between 3 and 20 characters.'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
+    return _isSatellite
+        ? 'assets/earth_snapshot/Satellite-$bracket.png'
+        : 'assets/earth_snapshot/$bracket.png';
   }
 
   Future<void> _handleSave() async {
@@ -128,6 +96,24 @@ class _EarthCreatorPageState extends State<EarthCreatorPage> {
     }
   }
 
+  void _showNameErrorDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Invalid Title'),
+          content: const Text('World Name must be between 3 and 20 characters.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     logger.i('Building EarthCreatorPage');
@@ -139,36 +125,8 @@ class _EarthCreatorPageState extends State<EarthCreatorPage> {
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned(
-              top: 16,
-              left: 16,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: () {
-                  Navigator.pop(context, false);
-                  logger.i('User tapped back button on EarthCreatorPage');
-                },
-              ),
-            ),
-            Positioned(
-              top: 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: SizedBox(
-                  width: screenWidth * 0.3,
-                  child: TextField(
-                    controller: _nameController,
-                    textAlign: TextAlign.center,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'World Name',
-                      border: UnderlineInputBorder(),
-                    ),
-                  ),
-                ),
-              ),
-            ),
+            BackButtonWidget(),
+            WorldNameInputField(controller: _nameController),
             Positioned(
               top: 60.0,
               right: 16.0,
@@ -198,14 +156,8 @@ class _EarthCreatorPageState extends State<EarthCreatorPage> {
               Positioned(
                 top: 140.0,
                 right: 16.0,
-                child: DropdownButton<String>(
-                  value: _selectedTheme,
-                  items: const [
-                    DropdownMenuItem(value: 'Dawn', child: Text('Dawn')),
-                    DropdownMenuItem(value: 'Day', child: Text('Day')),
-                    DropdownMenuItem(value: 'Dusk', child: Text('Dusk')),
-                    DropdownMenuItem(value: 'Night', child: Text('Night')),
-                  ],
+                child: ThemeDropdown(
+                  selectedTheme: _selectedTheme,
                   onChanged: (newValue) {
                     if (newValue != null) {
                       setState(() => _selectedTheme = newValue);
@@ -217,17 +169,7 @@ class _EarthCreatorPageState extends State<EarthCreatorPage> {
             Positioned(
               top: (screenHeight - screenHeight * 0.4) / 2,
               left: (screenWidth - screenWidth * 0.4) / 2,
-              child: SizedBox(
-                width: screenWidth * 0.4,
-                height: screenHeight * 0.4,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
-                  child: Image.asset(
-                    _themeImagePath,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
+              child: ThemePreviewWidget(imagePath: _themeImagePath),
             ),
             Positioned(
               left: 0,
