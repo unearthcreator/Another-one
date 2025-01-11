@@ -7,6 +7,7 @@ import 'package:map_mvp_project/src/starting_pages/world_selector/world_selector
 import 'package:map_mvp_project/src/starting_pages/main_menu/options/options.dart';
 import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/earth_creator.dart';
 import 'package:map_mvp_project/services/error_handler.dart';
+import 'package:map_mvp_project/services/app_routes.dart';
 import 'package:map_mvp_project/l10n/app_localizations.dart';
 import 'package:map_mvp_project/providers/locale_provider.dart';
 
@@ -34,27 +35,7 @@ class MyApp extends ConsumerWidget {
         initialRoute: '/',
 
         // Simple named routes plus a route that reads `arguments` for EarthCreatorPage:
-        routes: {
-          '/': (context) => const MainMenuPage(),
-          '/world_selector': (context) => const WorldSelectorPage(),
-          '/options': (context) => const OptionsPage(),
-
-          // EarthCreator route expects an `int` as `arguments`, e.g. from:
-          //   Navigator.pushNamed(context, '/earth_creator', arguments: someIndex);
-          '/earth_creator': (context) {
-            final args = ModalRoute.of(context)!.settings.arguments;
-            if (args is int) {
-              // If we indeed got an `int`, pass that along.
-              return EarthCreatorPage(carouselIndex: args);
-            } else {
-              // If no valid index was passed, default to 0 (or handle gracefully).
-              logger.w(
-                'No valid carousel index passed to /earth_creator. Defaulting to 0.',
-              );
-              return const EarthCreatorPage(carouselIndex: 0);
-            }
-          },
-        },
+        routes: appRoutes,
 
         // Hide the debug banner in the top-right corner
         debugShowCheckedModeBanner: false,
