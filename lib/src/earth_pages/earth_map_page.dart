@@ -19,9 +19,12 @@ import 'package:map_mvp_project/src/earth_pages/dialogs/annotation_form_dialog.d
 import 'package:map_mvp_project/src/earth_pages/timeline/timeline.dart';
 import 'package:map_mvp_project/src/earth_pages/annotations/annotation_id_linker.dart';
 import 'package:map_mvp_project/src/earth_pages/utils/map_queries.dart';
+import 'package:map_mvp_project/models/world_config.dart';
 
 class EarthMapPage extends StatefulWidget {
-  const EarthMapPage({super.key});
+  final WorldConfig worldConfig; // Add this parameter
+
+  const EarthMapPage({Key? key, required this.worldConfig}) : super(key: key);
 
   @override
   EarthMapPageState createState() => EarthMapPageState();

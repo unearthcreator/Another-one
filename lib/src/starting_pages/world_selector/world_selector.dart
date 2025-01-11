@@ -107,22 +107,24 @@ class _WorldSelectorPageState extends State<WorldSelectorPage> {
     }
   }
 
-  /// Called when the centered card is tapped in the Carousel.
+   /// Called when the centered card is tapped in the Carousel.
   /// We'll do the navigation logic here, so we can .then(...) re-fetch on return.
-  void _handleCardTap(int index) {
-  if (index == 4) {
-    logger.i('Navigating to EarthMapPage from card #4');
+void _handleCardTap(int index) {
+  final world = _worldConfigs.firstWhere(
+    (w) => w.carouselIndex == index,
+    orElse: () => WorldConfig(
+      id: 'default',
+      name: '',
+      mapType: 'standard',
+      timeMode: 'auto',
+      manualTheme: null,
+      carouselIndex: index,
+    ), // Use a default WorldConfig
+  );
+
+  if (world.name.isEmpty) {
+    logger.i('No world exists for index=$index. Navigating to EarthCreatorPage.');
     Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EarthMapPage(),
-      ),
-    ).then((_) {
-      logger.i('Returned from EarthMapPage – skipping card tap handler.');
-    });
-  } else {
-    logger.i('Navigating to EarthCreatorPage from card index=$index');
-    Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => EarthCreatorPage(carouselIndex: index),
@@ -131,22 +133,18 @@ class _WorldSelectorPageState extends State<WorldSelectorPage> {
       if (didSave == true) {
         logger.i('User saved a new world -> re-fetch & realign carousel.');
         await _fetchAllWorlds();
-        final idx = await LocalAppPreferences.getLastUsedCarouselIndex();
-        logger.i('After saving, lastUsedCarouselIndex=$idx');
-        
-        setState(() {
-          if (_worldConfigs.isEmpty) {
-            logger.i('No worlds => forcing carousel=4');
-            _carouselInitialIndex = 4;
-          } else {
-            _carouselInitialIndex = idx;
-          }
-        });
       }
     });
+  } else {
+    logger.i('World exists for index=$index. Navigating to EarthMapPage.');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EarthMapPage(worldConfig: world),
+      ),
+    );
   }
 }
-
   @override
   Widget build(BuildContext context) {
     logger.i('Building WorldSelectorPage widget');
