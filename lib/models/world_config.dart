@@ -29,6 +29,18 @@ class WorldConfig {
     required this.carouselIndex,
   });
 
+  /// Factory method to create a default `WorldConfig` for a given index.
+  factory WorldConfig.defaultConfig(int index) {
+    return WorldConfig(
+      id: 'default-$index',         // Unique ID for the default
+      name: '',                     // Empty name for a default world
+      mapType: 'standard',          // Default map type
+      timeMode: 'auto',             // Default time mode
+      manualTheme: null,            // No manual theme in "auto" mode
+      carouselIndex: index,         // The given index for the carousel
+    );
+  }
+
   /// Convert to JSON for storage (e.g. in Hive or another DB).
   Map<String, dynamic> toJson() {
     return {

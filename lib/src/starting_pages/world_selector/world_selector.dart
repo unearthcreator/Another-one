@@ -18,145 +18,104 @@ class WorldSelectorPage extends StatefulWidget {
 
 class _WorldSelectorPageState extends State<WorldSelectorPage> {
   late LocalWorldsRepository _worldsRepo;
-
-  /// We'll store all the fetched worlds here after loading from Hive.
   List<WorldConfig> _worldConfigs = [];
-
-  /// Simple loading/error-handling flags
   bool _isLoading = false;
   String? _errorMessage;
-
-  /// This will be the index we pass to the Carousel as the starting centered card.
-  /// If user has zero worlds, we default to 4 ("middle" card).
   int _carouselInitialIndex = 4;
 
   @override
   void initState() {
     super.initState();
-    logger.i('WorldSelectorPage initState -> init repo, fetch worlds, load index');
+    logger.i('WorldSelectorPage initState -> initializing');
     _worldsRepo = LocalWorldsRepository();
 
-    // 1) Fetch worlds from Hive.
-    _fetchAllWorlds();
-
-    // 2) Load "last used" index from local prefs (if any).
-    _loadLastUsedIndex();
+    _loadWorldsAndPreferences();
   }
 
-  /// Asynchronously fetch the "last used" index from local app prefs,
-  /// storing it in `_carouselInitialIndex` if found. If none found, remain at 4.
-  Future<void> _loadLastUsedIndex() async {
-    try {
-      final idx = await LocalAppPreferences.getLastUsedCarouselIndex();
-      logger.i('Got lastUsedCarouselIndex=$idx from prefs');
-      if (mounted) {
-        setState(() => _carouselInitialIndex = idx);
-      }
-    } catch (e) {
-      logger.w('Could not read lastUsedCarouselIndex: $e. Using default=4.');
-      // We leave _carouselInitialIndex at 4 by default.
-    }
-  }
-
-  /// Fetch all stored WorldConfig items from Hive.
-  Future<void> _fetchAllWorlds() async {
+  /// Combines fetching worlds and loading the last-used carousel index.
+  Future<void> _loadWorldsAndPreferences() async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
     });
 
     try {
+      // Fetch worlds
       final worlds = await _worldsRepo.getAllWorldConfigs();
-      logger.i('Fetched worlds from Hive: $worlds');
+      logger.i('Fetched ${worlds.length} worlds from Hive');
+      _worldConfigs = worlds;
 
-      setState(() {
-        _worldConfigs = worlds;
-        _isLoading = false;
-      });
+      // Load last-used index
+      final lastIndex = await LocalAppPreferences.getLastUsedCarouselIndex();
+      _carouselInitialIndex = lastIndex;
+      logger.i('Loaded last-used carousel index: $lastIndex');
     } catch (e, stackTrace) {
-      logger.e('Error fetching worlds', error: e, stackTrace: stackTrace);
-      setState(() {
-        _errorMessage = 'Failed to load worlds: $e';
-        _isLoading = false;
-      });
+      logger.e('Error loading worlds or preferences', error: e, stackTrace: stackTrace);
+      setState(() => _errorMessage = 'Failed to load data. Please try again.');
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
-  /// Clear all worlds from Hive + reset the stored index + re-fetch to update.
   Future<void> _handleClearAllWorlds() async {
     try {
       await _worldsRepo.clearAllWorldConfigs();
       logger.i('Cleared all worlds from Hive.');
-      await _fetchAllWorlds(); // re-fetch
-
-      // Also reset the stored last-used index to 4
       await LocalAppPreferences.setLastUsedCarouselIndex(4);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All worlds cleared.')),
-        );
-      }
+      await _loadWorldsAndPreferences();
+      _showSnackBar('All worlds cleared.');
     } catch (e, stackTrace) {
-      logger.e('Error clearing worlds', error: e, stackTrace: stackTrace);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to clear all worlds.')),
-        );
-      }
+      logger.e('Error clearing all worlds', error: e, stackTrace: stackTrace);
+      _showSnackBar('Failed to clear all worlds.');
     }
   }
 
-   /// Called when the centered card is tapped in the Carousel.
-  /// We'll do the navigation logic here, so we can .then(...) re-fetch on return.
-void _handleCardTap(int index) {
-  final world = _worldConfigs.firstWhere(
-    (w) => w.carouselIndex == index,
-    orElse: () => WorldConfig(
-      id: 'default',
-      name: '',
-      mapType: 'standard',
-      timeMode: 'auto',
-      manualTheme: null,
-      carouselIndex: index,
-    ), // Use a default WorldConfig
-  );
-
-  if (world.name.isEmpty) {
-    logger.i('No world exists for index=$index. Navigating to EarthCreatorPage.');
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EarthCreatorPage(carouselIndex: index),
-      ),
-    ).then((didSave) async {
-      if (didSave == true) {
-        logger.i('User saved a new world -> re-fetch & realign carousel.');
-        await _fetchAllWorlds();
-      }
-    });
-  } else {
-    logger.i('World exists for index=$index. Navigating to EarthMapPage.');
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => EarthMapPage(worldConfig: world),
-      ),
+  void _handleCardTap(int index) {
+    final world = _worldConfigs.firstWhere(
+      (w) => w.carouselIndex == index,
+      orElse: () => WorldConfig.defaultConfig(index),
     );
+
+    if (world.name.isEmpty) {
+      logger.i('Navigating to EarthCreatorPage for index $index');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EarthCreatorPage(carouselIndex: index),
+        ),
+      ).then((didSave) async {
+        if (didSave == true) {
+          logger.i('User created a new world. Reloading data.');
+          await _loadWorldsAndPreferences();
+        }
+      });
+    } else {
+      logger.i('Navigating to EarthMapPage for world: ${world.name}');
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => EarthMapPage(worldConfig: world),
+        ),
+      );
+    }
   }
-}
+
+  /// Displays a snackbar message.
+  void _showSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    logger.i('Building WorldSelectorPage widget');
-
-    // 1) Show spinner if loading
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     }
-
-    // 2) Error handling
     if (_errorMessage != null) {
       return Scaffold(
         body: Center(
@@ -168,47 +127,29 @@ void _handleCardTap(int index) {
       );
     }
 
-    // 3) Otherwise, normal UI:
-    try {
-      final screenHeight = MediaQuery.of(context).size.height;
-      final availableHeight = screenHeight - 56 - 40;
-      logger.d('ScreenHeight=$screenHeight, availableHeight=$availableHeight');
+    final screenHeight = MediaQuery.of(context).size.height;
+    final availableHeight = screenHeight - 56 - 40;
+    logger.d('ScreenHeight=$screenHeight, availableHeight=$availableHeight');
 
-      // If (after fetch) we truly have zero worlds, fallback to 4.
-      // Otherwise, rely on what we just read from preferences.
-      if (_worldConfigs.isEmpty) {
-        logger.i('No worlds found => forcing carousel index=4');
-        _carouselInitialIndex = 4;
-      }
-
-      return Scaffold(
-        body: Column(
-          children: [
-            // (A) Buttons row at the top
-            WorldSelectorButtons(
-              onClearAll: _handleClearAllWorlds,
-            ),
-
-            // (B) The carousel
-            Expanded(
-              child: Center(
-                child: CarouselWidget(
-                  key: ValueKey(_carouselInitialIndex), // Add a unique key
-                  availableHeight: availableHeight,
-                  initialIndex: _carouselInitialIndex,
-                  worldConfigs: _worldConfigs,
-                  onCenteredCardTapped: _handleCardTap,
-                ),
+    return Scaffold(
+      body: Column(
+        children: [
+          WorldSelectorButtons(
+            onClearAll: _handleClearAllWorlds,
+          ),
+          Expanded(
+            child: Center(
+              child: CarouselWidget(
+                key: ValueKey(_carouselInitialIndex),
+                availableHeight: availableHeight,
+                initialIndex: _carouselInitialIndex,
+                worldConfigs: _worldConfigs,
+                onCenteredCardTapped: _handleCardTap,
               ),
             ),
-          ],
-        ),
-      );
-    } catch (e, stackTrace) {
-      logger.e('Error building WorldSelectorPage', error: e, stackTrace: stackTrace);
-      return const Scaffold(
-        body: Center(child: Text('Error loading World Selector')),
-      );
-    }
+          ),
+        ],
+      ),
+    );
   }
 }
