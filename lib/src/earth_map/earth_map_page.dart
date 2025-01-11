@@ -6,19 +6,19 @@ import 'package:flutter/services.dart'; // for rootBundle
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:map_mvp_project/repositories/local_annotations_repository.dart';
 import 'package:map_mvp_project/services/error_handler.dart';
-import 'package:map_mvp_project/src/earth_pages/annotations/map_annotations_manager.dart';
-import 'package:map_mvp_project/src/earth_pages/gestures/map_gesture_handler.dart';
-import 'package:map_mvp_project/src/earth_pages/utils/map_config.dart';
+import 'package:map_mvp_project/src/earth_map/annotations/map_annotations_manager.dart';
+import 'package:map_mvp_project/src/earth_map/gestures/map_gesture_handler.dart';
+import 'package:map_mvp_project/src/earth_map/utils/map_config.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import 'package:map_mvp_project/services/geocoding_service.dart';
 import 'package:uuid/uuid.dart'; // for unique IDs
 import 'package:map_mvp_project/models/annotation.dart'; // for Annotation model
-import 'package:map_mvp_project/src/earth_pages/dialogs/annotation_form_dialog.dart';
+import 'package:map_mvp_project/src/earth_map/dialogs/annotation_form_dialog.dart';
 // Import your timeline view
-import 'package:map_mvp_project/src/earth_pages/timeline/timeline.dart';
-import 'package:map_mvp_project/src/earth_pages/annotations/annotation_id_linker.dart';
-import 'package:map_mvp_project/src/earth_pages/utils/map_queries.dart';
+import 'package:map_mvp_project/src/earth_map/timeline/timeline.dart';
+import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.dart';
+import 'package:map_mvp_project/src/earth_map/utils/map_queries.dart';
 import 'package:map_mvp_project/models/world_config.dart';
 
 class EarthMapPage extends StatefulWidget {
@@ -31,37 +31,43 @@ class EarthMapPage extends StatefulWidget {
 }
 
 class EarthMapPageState extends State<EarthMapPage> {
+  // Map-related variables
   late MapboxMap _mapboxMap;
   late MapAnnotationsManager _annotationsManager;
   late MapGestureHandler _gestureHandler;
+
+  // Repository for Hive annotations
   late LocalAnnotationsRepository _localRepo;
 
+  // Map readiness and error handling
   bool _isMapReady = false;
   bool _isError = false;
   String _errorMessage = '';
 
+  // Search and suggestions
   final TextEditingController _addressController = TextEditingController();
   bool _showSearchBar = false;
-
-  // For address suggestions
   List<String> _suggestions = [];
 
-  // Store Hive UUIDs for timeline display
+  // Timeline-related variables
   List<String> _hiveUuidsForTimeline = [];
+  bool _showTimelineCanvas = false;
 
-  Timer? _debounceTimer;
-
-  final uuid = Uuid(); // for unique IDs
-
+  // Annotation menu variables
   bool _showAnnotationMenu = false;
   PointAnnotation? _annotationMenuAnnotation;
   Offset _annotationMenuOffset = Offset.zero;
 
+  // Dragging and connecting
   bool _isDragging = false;
   String get _annotationButtonText => _isDragging ? 'Lock' : 'Move';
-
   bool _isConnectMode = false;
-  bool _showTimelineCanvas = false;
+
+  // Debounce timer for search
+  Timer? _debounceTimer;
+
+  // UUID generator
+  final uuid = Uuid(); // for unique IDs
 
   @override
   void initState() {
