@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:map_mvp_project/services/error_handler.dart'; // for logger
 import 'package:map_mvp_project/providers/locale_provider.dart'; // your Riverpod provider for locale
 import 'package:map_mvp_project/l10n/app_localizations.dart'; // for strings
+import 'package:map_mvp_project/src/starting_pages/main_menu/options/widgets/settings_row.dart'; // for SettingsRow widget
 
-/// This page presents user-adjustable settings, such as language selection
-/// (via a dropdown) and volume control (currently just a placeholder).
+final volumeProvider = StateProvider<double>((ref) => 0.5);
+
 class OptionsPage extends ConsumerStatefulWidget {
   const OptionsPage({Key? key}) : super(key: key);
 
@@ -14,110 +15,108 @@ class OptionsPage extends ConsumerStatefulWidget {
 }
 
 class _OptionsPageState extends ConsumerState<OptionsPage> {
-  // A list of supported locales, each tied to a human-readable name.
-  final List<(Locale locale, String displayName)> _availableLocales = [
-    (const Locale('en'), 'English'),
-    (const Locale('en', 'US'), 'English (US)'),
-    (const Locale('sv'), 'Svenska'),
-  ];
-
-  // A local variable to track the user’s chosen locale (for the drop-down).
-  // We'll initialize it in `initState` or from Riverpod in `build`.
   Locale? _selectedLocale;
 
   @override
   void initState() {
     super.initState();
-    // You can read the current locale from Riverpod here.
-    // We'll do so in build() to ensure we always show the latest.
+    try {
+      // Initialize locale with current value from Riverpod
+      _selectedLocale = ref.read(localeProvider);
+      logger.i('Locale initialized to $_selectedLocale in initState.');
+    } catch (e, stackTrace) {
+      logger.e('Failed to initialize locale in initState.', error: e, stackTrace: stackTrace);
+    }
+  }
+
+  /// Maps a `Locale` to a human-readable display name.
+  String _getLocaleDisplayName(Locale locale) {
+    try {
+      switch (locale.toString()) {
+        case 'en':
+          return 'English';
+        case 'en_US':
+          return 'English (US)';
+        case 'sv':
+          return 'Svenska';
+        default:
+          logger.w('Unrecognized locale: $locale. Using fallback.');
+          return locale.toString(); // Fallback for unexpected locales
+      }
+    } catch (e, stackTrace) {
+      logger.e('Error occurred while mapping locale: $locale', error: e, stackTrace: stackTrace);
+      return locale.toString(); // Fallback in case of an error
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     logger.i('Building OptionsPage.');
 
-    // 1) Get current localized strings (so we can display text for the UI).
-    final loc = AppLocalizations.of(context)!;
+    // Get localized strings
+    final loc = AppLocalizations.of(context) ??
+        (throw FlutterError('Localization not available.'));
 
-    // 2) Read the current locale from Riverpod. 
-    final currentLocale = ref.watch(localeProvider);
-
-    // 3) Make sure our drop-down is in sync with the app's locale.
-    //    If `_selectedLocale` is null or out-of-sync, update it.
-    if (_selectedLocale == null || _selectedLocale != currentLocale) {
-      _selectedLocale = currentLocale;
+    // Create dropdown items dynamically from `AppLocalizations.supportedLocales`.
+    List<DropdownMenuItem<Locale>> dropdownItems = [];
+    try {
+      dropdownItems = AppLocalizations.supportedLocales.map((locale) {
+        return DropdownMenuItem<Locale>(
+          value: locale,
+          child: Text(_getLocaleDisplayName(locale)),
+        );
+      }).toList();
+    } catch (e, stackTrace) {
+      logger.e('Failed to create dropdown items for locales.', error: e, stackTrace: stackTrace);
     }
-
-    // 4) Build a list of DropdownMenuItem widgets from `_availableLocales`.
-    final dropdownItems = _availableLocales.map((tuple) {
-      final locale = tuple.$1;
-      final name = tuple.$2;
-      return DropdownMenuItem<Locale>(
-        value: locale,
-        child: Text(name),
-      );
-    }).toList();
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(loc.options), // localized "Options" text if you have one
+        title: Text(loc.options),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // LANGUAGE DROPDOWN
-            Row(
-              children: [
-                Text(
-                  loc.language, 
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: DropdownButton<Locale>(
-                    isExpanded: true,
-                    value: _selectedLocale,
-                    items: dropdownItems,
-                    onChanged: (newLocale) {
-                      if (newLocale != null) {
-                        setState(() {
-                          _selectedLocale = newLocale;
-                        });
-                        // Update the Riverpod locale provider:
-                        ref.read(localeProvider.notifier).state = newLocale;
-                        logger.i('User changed locale to $newLocale');
-                      }
-                    },
-                  ),
-                ),
-              ],
+            // Language Selector
+            SettingsRow(
+              label: loc.language,
+              child: DropdownButton<Locale>(
+                isExpanded: true,
+                value: _selectedLocale,
+                items: dropdownItems,
+                onChanged: (newLocale) {
+                  try {
+                    if (newLocale != null) {
+                      setState(() {
+                        _selectedLocale = newLocale;
+                      });
+                      ref.read(localeProvider.notifier).state = newLocale;
+                      logger.i('User changed locale to $newLocale');
+                    }
+                  } catch (e, stackTrace) {
+                    logger.e('Failed to update locale on dropdown change.', error: e, stackTrace: stackTrace);
+                  }
+                },
+              ),
             ),
-
             const SizedBox(height: 32),
 
-            // VOLUME SLIDER (placeholder example)
-            Row(
-              children: [
-                Text(
-                  loc.volume, // Suppose you have a "volume" string in localizations
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Slider(
-                    value: 0.5, // Hard-coded for demonstration
-                    onChanged: (newValue) {
-                      // Future: setState or store volume in some settings provider
-                    },
-                  ),
-                ),
-              ],
+            // Volume Slider
+            SettingsRow(
+              label: loc.volume,
+              child: Slider(
+                value: ref.watch(volumeProvider),
+                onChanged: (newValue) {
+                  try {
+                    ref.read(volumeProvider.notifier).state = newValue;
+                    logger.i('Volume changed to $newValue');
+                  } catch (e, stackTrace) {
+                    logger.e('Failed to update volume on slider change.', error: e, stackTrace: stackTrace);
+                  }
+                },
+              ),
             ),
-
-            const SizedBox(height: 32),
-
-            // If you have more settings, add them below...
           ],
         ),
       ),

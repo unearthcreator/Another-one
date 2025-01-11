@@ -1,75 +1,78 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter/foundation.dart'; // For kReleaseMode
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'package:map_mvp_project/src/starting_pages/main_menu/main_menu.dart';
-import 'package:map_mvp_project/src/starting_pages/world_selector/world_selector.dart';
-import 'package:map_mvp_project/src/starting_pages/main_menu/options/options.dart';
-import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/earth_creator.dart';
 import 'package:map_mvp_project/services/error_handler.dart';
-import 'package:map_mvp_project/services/app_routes.dart';
-import 'package:map_mvp_project/l10n/app_localizations.dart';
+import 'package:map_mvp_project/services/app_routes.dart'; // Extracted routes
+import 'package:map_mvp_project/styles/theme.dart'; // Extracted theme
+import 'package:map_mvp_project/l10n/app_localizations.dart'; // Use existing localization configuration
 import 'package:map_mvp_project/providers/locale_provider.dart';
 
-/// MyApp acts as the root of your Flutter application.
-/// It sets up theming, localization, and navigation (routes).
-/// In addition, it integrates with Riverpod (through ConsumerWidget)
-/// to watch a localeProvider, enabling dynamic locale changes.
-class MyApp extends ConsumerWidget {
+/// The root widget of the application.
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    try {
-      // STEP 1: Watch the currentLocale from the Riverpod provider 
-      // for dynamic locale updates.
-      final currentLocale = ref.watch(localeProvider);
+  _MyAppState createState() => _MyAppState();
+}
 
-      return MaterialApp(
-        title: 'Map MVP Project',
-
-        // Provide a base theme:
-        theme: _buildAppTheme(),
-
-        // Initial route is '/', which maps to MainMenuPage below:
-        initialRoute: '/',
-
-        // Simple named routes plus a route that reads `arguments` for EarthCreatorPage:
-        routes: appRoutes,
-
-        // Hide the debug banner in the top-right corner
-        debugShowCheckedModeBanner: false,
-
-        // Let the MaterialApp use the locale read from Riverpod:
-        locale: currentLocale,
-
-        // Provide your localizations delegates:
-        localizationsDelegates: const [
-          AppLocalizations.delegate,
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-
-        // Specify the locales you explicitly support.
-        supportedLocales: const [
-          Locale('en'),
-          Locale('sv'),
-          Locale('en', 'US'),
-        ],
-      );
-    } catch (e, stackTrace) {
-      logger.e('Error while building MyApp widget', error: e, stackTrace: stackTrace);
-
-      // Return fallback UI on error
-      return const SizedBox();
-    }
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this); // Add observer for lifecycle monitoring
   }
 
-  /// Base theme for your app.
-  ThemeData _buildAppTheme() {
-    return ThemeData(
-      primarySwatch: Colors.blue,
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Log lifecycle changes for debugging or analytics
+    logger.i('App lifecycle state changed: $state');
+    super.didChangeAppLifecycleState(state);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer(
+      builder: (context, ref, _) {
+        final currentLocale = ref.watch(localeProvider);
+
+        try {
+          return MaterialApp(
+            title: 'Map MVP Project',
+            theme: appTheme(),
+            initialRoute: '/',
+            routes: appRoutes,
+            debugShowCheckedModeBanner: !kReleaseMode, // Hide debug banner in production
+            locale: currentLocale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          );
+        } catch (e, stackTrace) {
+          logger.e(
+            'Error while building MyApp widget. Current Locale: $currentLocale, Initial Route: /',
+            error: e,
+            stackTrace: stackTrace,
+          );
+
+          // Fallback UI in case of errors
+          return MaterialApp(
+            home: Scaffold(
+              body: Center(
+                child: Text(
+                  'Something went wrong. Please restart the app.',
+                  style: TextStyle(fontSize: 16, color: Colors.red),
+                ),
+              ),
+            ),
+          );
+        }
+      },
     );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Remove observer on dispose
+    super.dispose();
   }
 }
