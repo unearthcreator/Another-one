@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // for rootBundle
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
+
+// ---------------------- External & Project Imports ----------------------
 import 'package:map_mvp_project/repositories/local_annotations_repository.dart';
 import 'package:map_mvp_project/services/error_handler.dart';
 import 'package:map_mvp_project/src/earth_map/annotations/map_annotations_manager.dart';
@@ -10,17 +12,17 @@ import 'package:map_mvp_project/src/earth_map/utils/map_config.dart';
 import 'package:uuid/uuid.dart'; // for unique IDs
 import 'package:map_mvp_project/models/annotation.dart'; // for Annotation model
 import 'package:map_mvp_project/src/earth_map/dialogs/annotation_form_dialog.dart';
-// Import your timeline view
 import 'package:map_mvp_project/src/earth_map/timeline/timeline.dart';
 import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.dart';
 import 'package:map_mvp_project/src/earth_map/utils/map_queries.dart';
 import 'package:map_mvp_project/models/world_config.dart';
 import 'package:map_mvp_project/src/earth_map/search/search_widget.dart';
 import 'package:map_mvp_project/src/earth_map/misc/test_utils.dart';
+import 'package:map_mvp_project/src/earth_map/annotations/annotation_menu.dart';
 
-
+/// The main EarthMapPage, which sets up the map, annotations, and various UI widgets.
 class EarthMapPage extends StatefulWidget {
-  final WorldConfig worldConfig; // Add this parameter
+  final WorldConfig worldConfig;
 
   const EarthMapPage({Key? key, required this.worldConfig}) : super(key: key);
 
@@ -29,34 +31,33 @@ class EarthMapPage extends StatefulWidget {
 }
 
 class EarthMapPageState extends State<EarthMapPage> {
-  // Map-related variables
+  // ---------------------- Map-Related Variables ----------------------
   late MapboxMap _mapboxMap;
   late MapAnnotationsManager _annotationsManager;
   late MapGestureHandler _gestureHandler;
-
-  // Repository for Hive annotations
   late LocalAnnotationsRepository _localRepo;
-
-  // Map readiness and error handling
   bool _isMapReady = false;
 
-  // Timeline-related variables
+  // ---------------------- Timeline / Canvas UI ----------------------
   List<String> _hiveUuidsForTimeline = [];
   bool _showTimelineCanvas = false;
 
-  // Annotation menu variables
+  // ---------------------- Annotation Menu Variables ----------------------
   bool _showAnnotationMenu = false;
   PointAnnotation? _annotationMenuAnnotation;
   Offset _annotationMenuOffset = Offset.zero;
 
-  // Dragging and connecting
+  // ---------------------- Dragging & Connect Mode ----------------------
   bool _isDragging = false;
-  String get _annotationButtonText => _isDragging ? 'Lock' : 'Move';
   bool _isConnectMode = false;
+  String get _annotationButtonText => _isDragging ? 'Lock' : 'Move';
 
-  // UUID generator
-  final uuid = Uuid(); // for unique IDs
+  // ---------------------- UUID Generator ----------------------
+  final uuid = Uuid();
 
+  // ---------------------------------------------------------------------
+  //                   LIFECYCLE: initState & dispose
+  // ---------------------------------------------------------------------
   @override
   void initState() {
     super.initState();
@@ -67,14 +68,16 @@ class EarthMapPageState extends State<EarthMapPage> {
   void dispose() {
     super.dispose();
   }
-  
 
+  // ---------------------------------------------------------------------
+  //                       MAP CREATION / INIT
+  // ---------------------------------------------------------------------
   Future<void> _onMapCreated(MapboxMap mapboxMap) async {
     try {
       logger.i('Starting map initialization');
       _mapboxMap = mapboxMap;
 
-      // Create the underlying Mapbox annotation manager:
+      // Create the underlying Mapbox annotation manager
       final annotationManager = await mapboxMap.annotations
           .createPointAnnotationManager()
           .onError((error, stackTrace) {
@@ -95,12 +98,13 @@ class EarthMapPageState extends State<EarthMapPage> {
         localAnnotationsRepository: _localRepo,
       );
 
+      // Set up the gesture handler
       _gestureHandler = MapGestureHandler(
         mapboxMap: mapboxMap,
         annotationsManager: _annotationsManager,
         context: context,
         localAnnotationsRepository: _localRepo,
-        annotationIdLinker: annotationIdLinker, // <-- Pass it here
+        annotationIdLinker: annotationIdLinker,
         onAnnotationLongPress: _handleAnnotationLongPress,
         onAnnotationDragUpdate: _handleAnnotationDragUpdate,
         onDragEnd: _handleDragEnd,
@@ -114,23 +118,22 @@ class EarthMapPageState extends State<EarthMapPage> {
 
       logger.i('Map initialization completed successfully');
 
+      // Once the map is ready, load saved Hive annotations
       if (mounted) {
         setState(() => _isMapReady = true);
-
-        // Now that the map is ready, load any previously saved Hive annotations
         await _annotationsManager.loadAnnotationsFromHive();
       }
     } catch (e, stackTrace) {
       logger.e('Error during map initialization', error: e, stackTrace: stackTrace);
       if (mounted) {
-        setState(() {
-        });
+        setState(() {});
       }
     }
   }
 
-  // ---------------------- Annotation UI & Callbacks ----------------------
-
+  // ---------------------------------------------------------------------
+  //                 ANNOTATION UI & CALLBACKS
+  // ---------------------------------------------------------------------
   void _handleAnnotationLongPress(PointAnnotation annotation, Point annotationPosition) async {
     final screenPos = await _mapboxMap.pixelForCoordinate(annotationPosition);
     setState(() {
@@ -160,6 +163,9 @@ class EarthMapPageState extends State<EarthMapPage> {
     });
   }
 
+  // ---------------------------------------------------------------------
+  //                          LONG PRESS HANDLERS
+  // ---------------------------------------------------------------------
   void _handleLongPress(LongPressStartDetails details) {
     try {
       logger.i('Long press started at: ${details.localPosition}');
@@ -198,6 +204,9 @@ class EarthMapPageState extends State<EarthMapPage> {
     }
   }
 
+  // ---------------------------------------------------------------------
+  //                           EDITING ANNOTATIONS
+  // ---------------------------------------------------------------------
   Future<void> _editAnnotation() async {
     if (_annotationMenuAnnotation == null) return;
     final hiveId = _gestureHandler.getHiveIdForAnnotation(_annotationMenuAnnotation!);
@@ -206,6 +215,7 @@ class EarthMapPageState extends State<EarthMapPage> {
       return;
     }
 
+    // Retrieve annotation from Hive
     final allHiveAnnotations = await _localRepo.getAnnotations();
     final ann = allHiveAnnotations.firstWhere((a) => a.id == hiveId, orElse: () => Annotation(id: 'notFound'));
 
@@ -214,12 +224,14 @@ class EarthMapPageState extends State<EarthMapPage> {
       return;
     }
 
+    // Prepare existing fields
     final title = ann.title ?? '';
     final startDate = ann.startDate ?? '';
     final note = ann.note ?? '';
     final iconName = ann.iconName ?? 'cross';
     IconData chosenIcon = Icons.star;
 
+    // Show the form dialog
     final result = await showAnnotationFormDialog(
       context,
       title: title,
@@ -228,12 +240,14 @@ class EarthMapPageState extends State<EarthMapPage> {
       note: note,
     );
 
+    // If user saved
     if (result != null) {
       final updatedNote = result['note'] ?? '';
       final updatedImagePath = result['imagePath'];
       final updatedFilePath = result['filePath'];
       logger.i('User edited note: $updatedNote, imagePath: $updatedImagePath, filePath: $updatedFilePath');
 
+      // Build updated annotation
       final updatedAnnotation = Annotation(
         id: ann.id,
         title: title.isNotEmpty ? title : null,
@@ -248,13 +262,14 @@ class EarthMapPageState extends State<EarthMapPage> {
                     : ann.imagePath,
       );
 
+      // Update in Hive
       await _localRepo.updateAnnotation(updatedAnnotation);
       logger.i('Annotation updated in Hive with id: ${ann.id}');
 
-      // Remove from map visually
+      // Remove old annotation visually
       await _annotationsManager.removeAnnotation(_annotationMenuAnnotation!);
 
-      // Attempt to load the icon
+      // Load new icon
       final iconBytes = await rootBundle.load('assets/icons/${updatedAnnotation.iconName ?? 'cross'}.png');
       final imageData = iconBytes.buffer.asUint8List();
 
@@ -266,9 +281,10 @@ class EarthMapPageState extends State<EarthMapPage> {
         date: updatedAnnotation.startDate ?? '',
       );
 
-      // Re-link
+      // Re-link new annotation
       _gestureHandler.registerAnnotationId(mapAnnotation.id, updatedAnnotation.id);
 
+      // Update the local reference
       setState(() {
         _annotationMenuAnnotation = mapAnnotation;
       });
@@ -279,8 +295,11 @@ class EarthMapPageState extends State<EarthMapPage> {
     }
   }
 
-  // ---------------------- UI Builders ----------------------
-
+  // ---------------------------------------------------------------------
+  //                            UI BUILDERS
+  // ---------------------------------------------------------------------
+  /// The Map widget, plus gesture detection
+  /// 
   Widget _buildMapWidget() {
     return GestureDetector(
       onLongPressStart: _handleLongPress,
@@ -300,48 +319,9 @@ class EarthMapPageState extends State<EarthMapPage> {
     );
   }
 
+  /// Button to toggle the Timeline
 
-
-  Widget _buildTimelineButton() {
-    return Positioned(
-      top: 90,
-      left: 10,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          shape: const CircleBorder(),
-          padding: const EdgeInsets.all(8),
-        ),
-        onPressed: () async {
-          logger.i('Timeline button clicked');
-
-          // 1) Query visible Mapbox annotation IDs
-          final annotationIds = await queryVisibleFeatures(
-            context: context,
-            isMapReady: _isMapReady,
-            mapboxMap: _mapboxMap,
-            annotationsManager: _annotationsManager,
-          );
-          logger.i('Received annotationIds from map_queries: $annotationIds');
-          logger.i('Number of IDs returned: ${annotationIds.length}');
-
-          // 2) Convert those mapbox IDs -> Hive IDs
-          final hiveIds = _annotationsManager.annotationIdLinker
-              .getHiveIdsForMultipleAnnotations(annotationIds);
-
-          logger.i('Got these Hive IDs from annotationIdLinker: $hiveIds');
-          logger.i('Number of Hive IDs: ${hiveIds.length}');
-
-          // 3) Toggle the timeline + store IDs so the timeline can show them
-          setState(() {
-            _showTimelineCanvas = !_showTimelineCanvas;
-            _hiveUuidsForTimeline = hiveIds;
-          });
-        },
-        child: const Icon(Icons.timeline),
-      ),
-    );
-  }
-  
+  /// Banner to show while in Connect mode
   Widget _buildConnectModeBanner() {
     if (!_isConnectMode) return const SizedBox.shrink();
 
@@ -381,6 +361,7 @@ class EarthMapPageState extends State<EarthMapPage> {
     );
   }
 
+  /// The floating annotation menu (long-press on annotation)
   Widget _buildAnnotationMenu() {
     if (!_showAnnotationMenu || _annotationMenuAnnotation == null) return const SizedBox.shrink();
 
@@ -390,6 +371,7 @@ class EarthMapPageState extends State<EarthMapPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Move/Lock button
           ElevatedButton(
             onPressed: () {
               setState(() {
@@ -409,6 +391,8 @@ class EarthMapPageState extends State<EarthMapPage> {
             child: Text(_annotationButtonText),
           ),
           const SizedBox(height: 8),
+
+          // Edit button
           ElevatedButton(
             onPressed: () async {
               await _editAnnotation();
@@ -420,6 +404,8 @@ class EarthMapPageState extends State<EarthMapPage> {
             child: const Text('Edit'),
           ),
           const SizedBox(height: 8),
+
+          // Connect button
           ElevatedButton(
             onPressed: () {
               logger.i('Connect button clicked');
@@ -444,6 +430,8 @@ class EarthMapPageState extends State<EarthMapPage> {
             child: const Text('Connect'),
           ),
           const SizedBox(height: 8),
+
+          // Cancel button
           ElevatedButton(
             onPressed: () {
               setState(() {
@@ -466,52 +454,76 @@ class EarthMapPageState extends State<EarthMapPage> {
     );
   }
 
-  Widget _buildTimelineCanvas() {
-    if (!_showTimelineCanvas) return const SizedBox.shrink();
 
-    return Positioned(
-      left: 76,
-      right: 76,
-      top: 19,
-      bottom: 19,
-      child: IgnorePointer(
-        ignoring: false,
-        child: Container(
-          // We pass the Hive IDs to the TimelineView
-          child: TimelineView(hiveUuids: _hiveUuidsForTimeline),
-        ),
-      ),
-    );
-  }
+  // ---------------------------------------------------------------------
+  //                           BUILD METHOD
+  // ---------------------------------------------------------------------
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          _buildMapWidget(),
-          if (_isMapReady) ...[
-            _buildTimelineButton(),
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Stack(
+      children: [
+        // The main map widget
+        _buildMapWidget(),
 
-            // Use the utility functions from testing_utils.dart:
-            buildClearAnnotationsButton(annotationsManager: _annotationsManager),
-            buildClearImagesButton(),
-            buildDeleteImagesFolderButton(),
+        // Only show the rest if the map is ready
+        if (_isMapReady) ...[
+          // -----------------------------------
+          //   TIMELINE BUTTON (from timeline.dart)
+          // -----------------------------------
+          buildTimelineButton(
+            isMapReady: _isMapReady,
+            context: context,
+            mapboxMap: _mapboxMap,
+            annotationsManager: _annotationsManager,
+            // This toggles the boolean that shows/hides the timeline
+            onToggleTimeline: () {
+              setState(() {
+                _showTimelineCanvas = !_showTimelineCanvas;
+              });
+            },
+            // This receives the Hive IDs after querying visible features
+            onHiveIdsFetched: (List<String> hiveIds) {
+              setState(() {
+                _hiveUuidsForTimeline = hiveIds;
+              });
+            },
+          ),
 
-            // The search widget you broke out:
-            EarthMapSearchWidget(
-              mapboxMap: _mapboxMap,
-              annotationsManager: _annotationsManager,
-              gestureHandler: _gestureHandler,
-              localRepo: _localRepo,
-              uuid: uuid,
-            ),
+          // -----------------------------------
+          //   DEBUG UTILITY BUTTONS
+          // -----------------------------------
+          buildClearAnnotationsButton(annotationsManager: _annotationsManager),
+          buildClearImagesButton(),
+          buildDeleteImagesFolderButton(),
 
-            _buildAnnotationMenu(),
-            _buildConnectModeBanner(),
-            _buildTimelineCanvas(),
-          ],
+          // -----------------------------------
+          //   SEARCH WIDGET
+          // -----------------------------------
+          EarthMapSearchWidget(
+            mapboxMap: _mapboxMap,
+            annotationsManager: _annotationsManager,
+            gestureHandler: _gestureHandler,
+            localRepo: _localRepo,
+            uuid: uuid,
+          ),
+
+          // -----------------------------------
+          //   ANNOTATION MENU & CONNECT BANNER
+          // -----------------------------------
+          _buildAnnotationMenu(),
+          _buildConnectModeBanner(),
+
+          // -----------------------------------
+          //   TIMELINE CANVAS (from timeline.dart)
+          // -----------------------------------
+          buildTimelineCanvas(
+            showTimelineCanvas: _showTimelineCanvas,
+            hiveUuids: _hiveUuidsForTimeline,
+          ),
         ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 }
