@@ -11,7 +11,6 @@ import 'package:map_mvp_project/src/earth_map/gestures/map_gesture_handler.dart'
 import 'package:map_mvp_project/src/earth_map/utils/map_config.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
-import 'package:map_mvp_project/services/geocoding_service.dart';
 import 'package:uuid/uuid.dart'; // for unique IDs
 import 'package:map_mvp_project/models/annotation.dart'; // for Annotation model
 import 'package:map_mvp_project/src/earth_map/dialogs/annotation_form_dialog.dart';
@@ -59,9 +58,6 @@ class EarthMapPageState extends State<EarthMapPage> {
   String get _annotationButtonText => _isDragging ? 'Lock' : 'Move';
   bool _isConnectMode = false;
 
-  // Debounce timer for search
-  Timer? _debounceTimer;
-
   // UUID generator
   final uuid = Uuid(); // for unique IDs
 
@@ -73,7 +69,6 @@ class EarthMapPageState extends State<EarthMapPage> {
 
   @override
   void dispose() {
-    _debounceTimer?.cancel();
     super.dispose();
   }
   
