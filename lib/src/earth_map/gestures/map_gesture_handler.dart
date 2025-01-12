@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // for rootBundle
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:map_mvp_project/services/error_handler.dart';
-import 'package:map_mvp_project/src/earth_pages/annotations/map_annotations_manager.dart';
-import 'package:map_mvp_project/src/earth_pages/dialogs/annotation_initialization_dialog.dart';
-import 'package:map_mvp_project/src/earth_pages/dialogs/annotation_form_dialog.dart';
-import 'package:map_mvp_project/src/earth_pages/dialogs/show_annotation_details_dialog.dart';
-import 'package:map_mvp_project/src/earth_pages/utils/trash_can_handler.dart';
+import 'package:map_mvp_project/src/earth_map/annotations/map_annotations_manager.dart';
+import 'package:map_mvp_project/src/earth_map/dialogs/annotation_initialization_dialog.dart';
+import 'package:map_mvp_project/src/earth_map/dialogs/annotation_form_dialog.dart';
+import 'package:map_mvp_project/src/earth_map/dialogs/show_annotation_details_dialog.dart';
+import 'package:map_mvp_project/src/earth_map/utils/trash_can_handler.dart';
 import 'package:uuid/uuid.dart'; // for unique IDs
 import 'package:map_mvp_project/models/annotation.dart'; // Your Annotation model
 import 'package:map_mvp_project/repositories/local_annotations_repository.dart'; // Your local repo
-import 'package:map_mvp_project/src/earth_pages/annotations/annotation_id_linker.dart';
+import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.dart';
 
 typedef AnnotationLongPressCallback = void Function(PointAnnotation annotation, Point annotationPosition);
 typedef AnnotationDragUpdateCallback = void Function(PointAnnotation annotation);

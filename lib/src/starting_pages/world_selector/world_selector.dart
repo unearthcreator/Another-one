@@ -7,7 +7,7 @@ import 'package:map_mvp_project/src/starting_pages/world_selector/widgets/carous
 import 'package:map_mvp_project/src/starting_pages/world_selector/widgets/world_selector_buttons.dart';
 import 'package:map_mvp_project/repositories/local_app_preferences.dart'; // For last-used index
 import 'package:map_mvp_project/src/starting_pages/world_selector/earth_creator/earth_creator.dart';
-import 'package:map_mvp_project/src/earth_pages/earth_map_page.dart';
+import 'package:map_mvp_project/src/earth_map/earth_map_page.dart';
 
 class WorldSelectorPage extends StatefulWidget {
   const WorldSelectorPage({super.key});

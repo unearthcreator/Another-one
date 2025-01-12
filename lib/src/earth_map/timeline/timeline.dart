@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:map_mvp_project/models/annotation.dart';
-import 'package:map_mvp_project/src/earth_pages/timeline/painter/timeline_painter.dart';
-import 'package:map_mvp_project/src/earth_pages/timeline/utils/timeline_annotations.dart';
+import 'package:map_mvp_project/src/earth_map/timeline/painter/timeline_painter.dart';
+import 'package:map_mvp_project/src/earth_map/timeline/utils/timeline_annotations.dart';
 
 class TimelineView extends StatelessWidget {
   /// Make this nullable or provide a default empty list.

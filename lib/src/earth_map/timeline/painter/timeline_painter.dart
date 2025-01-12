@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui' as ui; // We'll use ui.Size for clarity
 import 'package:map_mvp_project/models/annotation.dart';
 import 'package:map_mvp_project/services/error_handler.dart'; // for logger
-import 'package:map_mvp_project/src/earth_pages/timeline/painter/utils/timeline_axis.dart';
+import 'package:map_mvp_project/src/earth_map/timeline/painter/utils/timeline_axis.dart';
 
 // Adjust the above imports according to your actual folder structure
 

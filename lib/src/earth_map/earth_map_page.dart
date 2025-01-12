@@ -21,6 +21,7 @@ import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.d
 import 'package:map_mvp_project/src/earth_map/utils/map_queries.dart';
 import 'package:map_mvp_project/models/world_config.dart';
 
+
 class EarthMapPage extends StatefulWidget {
   final WorldConfig worldConfig; // Add this parameter
 
@@ -41,8 +42,6 @@ class EarthMapPageState extends State<EarthMapPage> {
 
   // Map readiness and error handling
   bool _isMapReady = false;
-  bool _isError = false;
-  String _errorMessage = '';
 
   // Search and suggestions
   final TextEditingController _addressController = TextEditingController();
@@ -156,8 +155,6 @@ class EarthMapPageState extends State<EarthMapPage> {
       logger.e('Error during map initialization', error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() {
-          _isError = true;
-          _errorMessage = 'Failed to initialize map: ${e.toString()}';
         });
       }
     }
@@ -315,24 +312,6 @@ class EarthMapPageState extends State<EarthMapPage> {
 
   // ---------------------- UI Builders ----------------------
 
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.red, size: 48),
-          const SizedBox(height: 16),
-          Text(_errorMessage, textAlign: TextAlign.center, style: const TextStyle(color: Colors.red)),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Go Back'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildMapWidget() {
     return GestureDetector(
       onLongPressStart: _handleLongPress,
@@ -348,19 +327,6 @@ class EarthMapPageState extends State<EarthMapPage> {
         cameraOptions: MapConfig.defaultCameraOptions,
         styleUri: MapConfig.styleUriEarth,
         onMapCreated: _onMapCreated,
-      ),
-    );
-  }
-
-  Widget _buildBackButton() {
-    return Positioned(
-      top: 40,
-      left: 10,
-      child: BackButton(
-        onPressed: () {
-          logger.i('Navigating back from EarthMapPage');
-          Navigator.pop(context);
-        },
       ),
     );
   }
@@ -766,12 +732,9 @@ class EarthMapPageState extends State<EarthMapPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _isError
-          ? _buildErrorWidget()
-          : Stack(
+      body: Stack(
               children: [
                 _buildMapWidget(),
-                if (_isMapReady) _buildBackButton(),
                 if (_isMapReady) _buildSearchToggleButton(),
                 if (_isMapReady) _buildTimelineButton(),
                 if (_isMapReady) _buildClearAnnotationsButton(),

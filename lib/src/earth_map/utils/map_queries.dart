@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:map_mvp_project/services/error_handler.dart'; // for logger
-import 'package:map_mvp_project/src/earth_pages/annotations/map_annotations_manager.dart';
+import 'package:map_mvp_project/src/earth_map/annotations/map_annotations_manager.dart';
 
 Future<List<String>> queryVisibleFeatures({
   required BuildContext context,

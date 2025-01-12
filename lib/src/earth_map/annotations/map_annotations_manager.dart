@@ -2,7 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart'; // for rootBundle
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:map_mvp_project/services/error_handler.dart';
-import 'package:map_mvp_project/src/earth_pages/annotations/annotation_id_linker.dart';
+import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.dart';
 import 'package:map_mvp_project/repositories/local_annotations_repository.dart';
 
 class MapAnnotationsManager {

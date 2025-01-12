@@ -1,7 +1,7 @@
 // map_state_manager.dart
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'package:map_mvp_project/src/earth_pages/gestures/initialize_map_gestures.dart';  // Import gesture functions to apply them on initialization
+import 'package:map_mvp_project/src/earth_map/gestures/initialize_map_gestures.dart';  // Import gesture functions to apply them on initialization
 
 /// Manages the readiness state and setup of the map, including gestures and annotations.
 class MapStateManager {
