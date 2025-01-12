@@ -20,7 +20,7 @@ import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.d
 import 'package:map_mvp_project/src/earth_map/utils/map_queries.dart';
 import 'package:map_mvp_project/models/world_config.dart';
 import 'package:map_mvp_project/src/earth_map/search/search_widget.dart';
-
+import 'package:map_mvp_project/src/earth_map/misc/test_utils.dart';
 
 
 class EarthMapPage extends StatefulWidget {
@@ -345,83 +345,6 @@ class EarthMapPageState extends State<EarthMapPage> {
       ),
     );
   }
-
-  Widget _buildClearAnnotationsButton() {
-    return Positioned(
-      top: 40,
-      right: 10,
-      child: ElevatedButton(
-        onPressed: () async {
-          logger.i('Clear button pressed - clearing all annotations from Hive and from the map.');
-
-          // 1) Remove all from Hive
-          final box = await Hive.openBox<Map>('annotationsBox');
-          await box.clear();
-
-          logger.i('After clearing, the "annotationsBox" has ${box.length} items.');
-          await box.close();
-          logger.i('Annotations cleared from Hive.');
-
-          // 2) Remove all from the map visually
-          await _annotationsManager.removeAllAnnotations();
-          logger.i('All annotations removed from the map.');
-
-          logger.i('Done clearing. You can now add new annotations.');
-        },
-        child: const Text('Clear Annotations'),
-      ),
-    );
-  }
-
-  Widget _buildClearImagesButton() {
-    return Positioned(
-      top: 90,
-      right: 10,
-      child: ElevatedButton(
-        onPressed: () async {
-          logger.i('Clear images button pressed - clearing images folder files.');
-          final appDir = await getApplicationDocumentsDirectory();
-          final imagesDir = Directory(p.join(appDir.path, 'images'));
-
-          if (await imagesDir.exists()) {
-            final files = imagesDir.listSync();
-            for (var file in files) {
-              if (file is File) {
-                await file.delete();
-              }
-            }
-            logger.i('All image files cleared from ${imagesDir.path}');
-          } else {
-            logger.i('Images directory does not exist, nothing to clear.');
-          }
-        },
-        child: const Text('Clear Images'),
-      ),
-    );
-  }
-
-  Widget _buildDeleteImagesFolderButton() {
-    return Positioned(
-      top: 140,
-      right: 10,
-      child: ElevatedButton(
-        onPressed: () async {
-          logger.i('Delete images folder button pressed - deleting entire images folder.');
-          final appDir = await getApplicationDocumentsDirectory();
-          final imagesDir = Directory(p.join(appDir.path, 'images'));
-
-          if (await imagesDir.exists()) {
-            await imagesDir.delete(recursive: true);
-            logger.i('Images directory deleted.');
-          } else {
-            logger.i('Images directory does not exist, nothing to delete.');
-          }
-        },
-        child: const Text('Delete Images Folder'),
-      ),
-    );
-  }
-
   
   Widget _buildConnectModeBanner() {
     if (!_isConnectMode) return const SizedBox.shrink();
@@ -564,8 +487,6 @@ class EarthMapPageState extends State<EarthMapPage> {
       ),
     );
   }
-
-  @override
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -574,17 +495,19 @@ class EarthMapPageState extends State<EarthMapPage> {
           _buildMapWidget(),
           if (_isMapReady) ...[
             _buildTimelineButton(),
-            _buildClearAnnotationsButton(),
-            _buildClearImagesButton(),
-            _buildDeleteImagesFolderButton(),
 
-            // <-- The new search widget
+            // Use the utility functions from testing_utils.dart:
+            buildClearAnnotationsButton(annotationsManager: _annotationsManager),
+            buildClearImagesButton(),
+            buildDeleteImagesFolderButton(),
+
+            // The search widget you broke out:
             EarthMapSearchWidget(
               mapboxMap: _mapboxMap,
               annotationsManager: _annotationsManager,
               gestureHandler: _gestureHandler,
               localRepo: _localRepo,
-              uuid: uuid,  // you already have this
+              uuid: uuid,
             ),
 
             _buildAnnotationMenu(),
