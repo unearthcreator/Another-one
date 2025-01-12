@@ -14,11 +14,10 @@ import 'package:map_mvp_project/models/annotation.dart'; // for Annotation model
 import 'package:map_mvp_project/src/earth_map/dialogs/annotation_form_dialog.dart';
 import 'package:map_mvp_project/src/earth_map/timeline/timeline.dart';
 import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.dart';
-import 'package:map_mvp_project/src/earth_map/utils/map_queries.dart';
 import 'package:map_mvp_project/models/world_config.dart';
 import 'package:map_mvp_project/src/earth_map/search/search_widget.dart';
 import 'package:map_mvp_project/src/earth_map/misc/test_utils.dart';
-import 'package:map_mvp_project/src/earth_map/annotations/annotation_menu.dart';
+import 'package:map_mvp_project/src/earth_map/utils/connect_banner.dart';
 
 /// The main EarthMapPage, which sets up the map, annotations, and various UI widgets.
 class EarthMapPage extends StatefulWidget {
@@ -319,47 +318,6 @@ class EarthMapPageState extends State<EarthMapPage> {
     );
   }
 
-  /// Button to toggle the Timeline
-
-  /// Banner to show while in Connect mode
-  Widget _buildConnectModeBanner() {
-    if (!_isConnectMode) return const SizedBox.shrink();
-
-    return Positioned(
-      top: 50,
-      left: (MediaQuery.of(context).size.width - 300) / 2,
-      child: Container(
-        width: 300,
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.7),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          children: [
-            const Text(
-              'Click another annotation to connect, or cancel.',
-              style: TextStyle(color: Colors.white),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  _isConnectMode = false;
-                });
-                _gestureHandler.disableConnectMode();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              child: const Text('Cancel'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   /// The floating annotation menu (long-press on annotation)
   Widget _buildAnnotationMenu() {
@@ -509,10 +467,23 @@ Widget build(BuildContext context) {
           ),
 
           // -----------------------------------
-          //   ANNOTATION MENU & CONNECT BANNER
+          //   ANNOTATION MENU
           // -----------------------------------
           _buildAnnotationMenu(),
-          _buildConnectModeBanner(),
+
+          // -----------------------------------
+          //   CONNECT MODE BANNER (new file)
+          // -----------------------------------
+          buildConnectModeBanner(
+            isConnectMode: _isConnectMode,
+            gestureHandler: _gestureHandler,
+            onCancel: () {
+              // Called if user taps "Cancel"
+              setState(() {
+                _isConnectMode = false;
+              });
+            },
+          ),
 
           // -----------------------------------
           //   TIMELINE CANVAS (from timeline.dart)
