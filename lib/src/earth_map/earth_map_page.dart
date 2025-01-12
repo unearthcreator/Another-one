@@ -1,7 +1,5 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
 import 'package:flutter/services.dart'; // for rootBundle
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
 import 'package:map_mvp_project/repositories/local_annotations_repository.dart';
@@ -9,8 +7,6 @@ import 'package:map_mvp_project/services/error_handler.dart';
 import 'package:map_mvp_project/src/earth_map/annotations/map_annotations_manager.dart';
 import 'package:map_mvp_project/src/earth_map/gestures/map_gesture_handler.dart';
 import 'package:map_mvp_project/src/earth_map/utils/map_config.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart'; // for unique IDs
 import 'package:map_mvp_project/models/annotation.dart'; // for Annotation model
 import 'package:map_mvp_project/src/earth_map/dialogs/annotation_form_dialog.dart';
