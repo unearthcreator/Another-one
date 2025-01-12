@@ -19,6 +19,9 @@ import 'package:map_mvp_project/src/earth_map/search/search_widget.dart';
 import 'package:map_mvp_project/src/earth_map/misc/test_utils.dart';
 import 'package:map_mvp_project/src/earth_map/utils/connect_banner.dart';
 
+// <-- Import our new annotation_menu.dart file:
+import 'package:map_mvp_project/src/earth_map/annotations/annotation_menu.dart';
+
 /// The main EarthMapPage, which sets up the map, annotations, and various UI widgets.
 class EarthMapPage extends StatefulWidget {
   final WorldConfig worldConfig;
@@ -256,9 +259,9 @@ class EarthMapPageState extends State<EarthMapPage> {
         note: updatedNote.isNotEmpty ? updatedNote : null,
         latitude: ann.latitude ?? 0.0,
         longitude: ann.longitude ?? 0.0,
-        imagePath: (updatedImagePath != null && updatedImagePath.isNotEmpty) 
-                    ? updatedImagePath 
-                    : ann.imagePath,
+        imagePath: (updatedImagePath != null && updatedImagePath.isNotEmpty)
+            ? updatedImagePath
+            : ann.imagePath,
       );
 
       // Update in Hive
@@ -297,8 +300,8 @@ class EarthMapPageState extends State<EarthMapPage> {
   // ---------------------------------------------------------------------
   //                            UI BUILDERS
   // ---------------------------------------------------------------------
+
   /// The Map widget, plus gesture detection
-  /// 
   Widget _buildMapWidget() {
     return GestureDetector(
       onLongPressStart: _handleLongPress,
@@ -318,183 +321,128 @@ class EarthMapPageState extends State<EarthMapPage> {
     );
   }
 
-
-  /// The floating annotation menu (long-press on annotation)
-  Widget _buildAnnotationMenu() {
-    if (!_showAnnotationMenu || _annotationMenuAnnotation == null) return const SizedBox.shrink();
-
-    return Positioned(
-      left: _annotationMenuOffset.dx,
-      top: _annotationMenuOffset.dy,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Move/Lock button
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                if (_isDragging) {
-                  _gestureHandler.hideTrashCanAndStopDragging();
-                  _isDragging = false;
-                } else {
-                  _gestureHandler.startDraggingSelectedAnnotation();
-                  _isDragging = true;
-                }
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            child: Text(_annotationButtonText),
-          ),
-          const SizedBox(height: 8),
-
-          // Edit button
-          ElevatedButton(
-            onPressed: () async {
-              await _editAnnotation();
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            child: const Text('Edit'),
-          ),
-          const SizedBox(height: 8),
-
-          // Connect button
-          ElevatedButton(
-            onPressed: () {
-              logger.i('Connect button clicked');
-              setState(() {
-                _showAnnotationMenu = false;
-                if (_isDragging) {
-                  _gestureHandler.hideTrashCanAndStopDragging();
-                  _isDragging = false;
-                }
-                _isConnectMode = true;
-              });
-              if (_annotationMenuAnnotation != null) {
-                _gestureHandler.enableConnectMode(_annotationMenuAnnotation!);
-              } else {
-                logger.w('No annotation available when Connect pressed');
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            child: const Text('Connect'),
-          ),
-          const SizedBox(height: 8),
-
-          // Cancel button
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _showAnnotationMenu = false;
-                _annotationMenuAnnotation = null;
-                if (_isDragging) {
-                  _gestureHandler.hideTrashCanAndStopDragging();
-                  _isDragging = false;
-                }
-              });
-            },
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            child: const Text('Cancel'),
-          ),
-        ],
-      ),
-    );
-  }
-
-
   // ---------------------------------------------------------------------
   //                           BUILD METHOD
   // ---------------------------------------------------------------------
   @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: Stack(
-      children: [
-        // The main map widget
-        _buildMapWidget(),
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // The main map widget
+          _buildMapWidget(),
 
-        // Only show the rest if the map is ready
-        if (_isMapReady) ...[
-          // -----------------------------------
-          //   TIMELINE BUTTON (from timeline.dart)
-          // -----------------------------------
-          buildTimelineButton(
-            isMapReady: _isMapReady,
-            context: context,
-            mapboxMap: _mapboxMap,
-            annotationsManager: _annotationsManager,
-            // This toggles the boolean that shows/hides the timeline
-            onToggleTimeline: () {
-              setState(() {
-                _showTimelineCanvas = !_showTimelineCanvas;
-              });
-            },
-            // This receives the Hive IDs after querying visible features
-            onHiveIdsFetched: (List<String> hiveIds) {
-              setState(() {
-                _hiveUuidsForTimeline = hiveIds;
-              });
-            },
-          ),
+          // Only show the rest if the map is ready
+          if (_isMapReady) ...[
+            // TIMELINE BUTTON (from timeline.dart)
+            buildTimelineButton(
+              isMapReady: _isMapReady,
+              context: context,
+              mapboxMap: _mapboxMap,
+              annotationsManager: _annotationsManager,
+              onToggleTimeline: () {
+                setState(() {
+                  _showTimelineCanvas = !_showTimelineCanvas;
+                });
+              },
+              onHiveIdsFetched: (List<String> hiveIds) {
+                setState(() {
+                  _hiveUuidsForTimeline = hiveIds;
+                });
+              },
+            ),
 
-          // -----------------------------------
-          //   DEBUG UTILITY BUTTONS
-          // -----------------------------------
-          buildClearAnnotationsButton(annotationsManager: _annotationsManager),
-          buildClearImagesButton(),
-          buildDeleteImagesFolderButton(),
+            // DEBUG UTILITY BUTTONS
+            buildClearAnnotationsButton(annotationsManager: _annotationsManager),
+            buildClearImagesButton(),
+            buildDeleteImagesFolderButton(),
 
-          // -----------------------------------
-          //   SEARCH WIDGET
-          // -----------------------------------
-          EarthMapSearchWidget(
-            mapboxMap: _mapboxMap,
-            annotationsManager: _annotationsManager,
-            gestureHandler: _gestureHandler,
-            localRepo: _localRepo,
-            uuid: uuid,
-          ),
+            // SEARCH WIDGET
+            EarthMapSearchWidget(
+              mapboxMap: _mapboxMap,
+              annotationsManager: _annotationsManager,
+              gestureHandler: _gestureHandler,
+              localRepo: _localRepo,
+              uuid: uuid,
+            ),
 
-          // -----------------------------------
-          //   ANNOTATION MENU
-          // -----------------------------------
-          _buildAnnotationMenu(),
+            // ANNOTATION MENU (moved out to annotation_menu.dart)
+            buildAnnotationMenu(
+              showAnnotationMenu: _showAnnotationMenu,
+              annotation: _annotationMenuAnnotation,
+              annotationMenuOffset: _annotationMenuOffset,
+              isDragging: _isDragging,
+              isConnectMode: _isConnectMode,
+              annotationButtonText: _annotationButtonText,
 
-          // -----------------------------------
-          //   CONNECT MODE BANNER (new file)
-          // -----------------------------------
-          buildConnectModeBanner(
-            isConnectMode: _isConnectMode,
-            gestureHandler: _gestureHandler,
-            onCancel: () {
-              // Called if user taps "Cancel"
-              setState(() {
-                _isConnectMode = false;
-              });
-            },
-          ),
+              // Move/Lock
+              onToggleDragging: () {
+                setState(() {
+                  if (_isDragging) {
+                    _gestureHandler.hideTrashCanAndStopDragging();
+                    _isDragging = false;
+                  } else {
+                    _gestureHandler.startDraggingSelectedAnnotation();
+                    _isDragging = true;
+                  }
+                });
+              },
 
-          // -----------------------------------
-          //   TIMELINE CANVAS (from timeline.dart)
-          // -----------------------------------
-          buildTimelineCanvas(
-            showTimelineCanvas: _showTimelineCanvas,
-            hiveUuids: _hiveUuidsForTimeline,
-          ),
+              // Edit
+              onEditAnnotation: () async {
+                await _editAnnotation();
+              },
+
+              // Connect
+              onConnect: () {
+                logger.i('Connect button clicked');
+                setState(() {
+                  _showAnnotationMenu = false;
+                  if (_isDragging) {
+                    _gestureHandler.hideTrashCanAndStopDragging();
+                    _isDragging = false;
+                  }
+                  _isConnectMode = true;
+                });
+                if (_annotationMenuAnnotation != null) {
+                  _gestureHandler.enableConnectMode(_annotationMenuAnnotation!);
+                } else {
+                  logger.w('No annotation available when Connect pressed');
+                }
+              },
+
+              // Cancel
+              onCancel: () {
+                setState(() {
+                  _showAnnotationMenu = false;
+                  _annotationMenuAnnotation = null;
+                  if (_isDragging) {
+                    _gestureHandler.hideTrashCanAndStopDragging();
+                    _isDragging = false;
+                  }
+                });
+              },
+            ),
+
+            // CONNECT MODE BANNER (from connect_banner.dart)
+            buildConnectModeBanner(
+              isConnectMode: _isConnectMode,
+              gestureHandler: _gestureHandler,
+              onCancel: () {
+                setState(() {
+                  _isConnectMode = false;
+                });
+              },
+            ),
+
+            // TIMELINE CANVAS (from timeline.dart)
+            buildTimelineCanvas(
+              showTimelineCanvas: _showTimelineCanvas,
+              hiveUuids: _hiveUuidsForTimeline,
+            ),
+          ],
         ],
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 }

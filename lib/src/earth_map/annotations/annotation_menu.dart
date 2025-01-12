@@ -2,24 +2,34 @@
 
 import 'package:flutter/material.dart';
 import 'package:mapbox_maps_flutter/mapbox_maps_flutter.dart';
-import 'package:map_mvp_project/services/error_handler.dart'; // for logger
+import 'package:map_mvp_project/services/error_handler.dart' show logger;
 
-/// A function returning the annotation menu widget. We pass in booleans, offsets,
-/// and callbacks from EarthMapPage so we can keep all UI code here, but still let
-/// EarthMapPage handle setState and actual logic changes.
+/// A helper function that returns the annotation menu (Positioned).
+///
+/// The calling widget (e.g., EarthMapPage) decides when to show/hide this menu
+/// by passing [showAnnotationMenu], and provides the annotation details + callbacks.
 Widget buildAnnotationMenu({
   required bool showAnnotationMenu,
   required bool isDragging,
-  required PointAnnotation? annotationMenuAnnotation,
-  required Offset annotationMenuOffset,
+  required bool isConnectMode,
   required String annotationButtonText,
+  required PointAnnotation? annotation,
+  required Offset annotationMenuOffset,
+
+  /// Callback when user toggles "Move" or "Lock"
   required VoidCallback onToggleDragging,
+
+  /// Callback when user taps "Edit"
   required Future<void> Function() onEditAnnotation,
+
+  /// Callback when user taps "Connect"
   required VoidCallback onConnect,
+
+  /// Callback when user taps "Cancel"
   required VoidCallback onCancel,
 }) {
-  // If we shouldn't show the menu or there's no current annotation, return empty
-  if (!showAnnotationMenu || annotationMenuAnnotation == null) {
+  // If the menu shouldn't show or there's no annotation, return an empty widget
+  if (!showAnnotationMenu || annotation == null) {
     return const SizedBox.shrink();
   }
 
@@ -29,6 +39,7 @@ Widget buildAnnotationMenu({
     child: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Move/Lock button
         ElevatedButton(
           onPressed: onToggleDragging,
           style: ElevatedButton.styleFrom(
@@ -38,6 +49,8 @@ Widget buildAnnotationMenu({
           child: Text(annotationButtonText),
         ),
         const SizedBox(height: 8),
+
+        // Edit button
         ElevatedButton(
           onPressed: onEditAnnotation,
           style: ElevatedButton.styleFrom(
@@ -47,10 +60,12 @@ Widget buildAnnotationMenu({
           child: const Text('Edit'),
         ),
         const SizedBox(height: 8),
+
+        // Connect button
         ElevatedButton(
           onPressed: () {
             logger.i('Connect button clicked');
-            onConnect(); // Let EarthMapPage handle setState + logic
+            onConnect();
           },
           style: ElevatedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -59,6 +74,8 @@ Widget buildAnnotationMenu({
           child: const Text('Connect'),
         ),
         const SizedBox(height: 8),
+
+        // Cancel button
         ElevatedButton(
           onPressed: onCancel,
           style: ElevatedButton.styleFrom(
