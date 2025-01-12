@@ -20,6 +20,8 @@ import 'package:map_mvp_project/src/earth_map/timeline/timeline.dart';
 import 'package:map_mvp_project/src/earth_map/annotations/annotation_id_linker.dart';
 import 'package:map_mvp_project/src/earth_map/utils/map_queries.dart';
 import 'package:map_mvp_project/models/world_config.dart';
+import 'package:map_mvp_project/src/earth_map/search/search_widget.dart';
+
 
 
 class EarthMapPage extends StatefulWidget {
@@ -42,11 +44,6 @@ class EarthMapPageState extends State<EarthMapPage> {
 
   // Map readiness and error handling
   bool _isMapReady = false;
-
-  // Search and suggestions
-  final TextEditingController _addressController = TextEditingController();
-  bool _showSearchBar = false;
-  List<String> _suggestions = [];
 
   // Timeline-related variables
   List<String> _hiveUuidsForTimeline = [];
@@ -72,33 +69,14 @@ class EarthMapPageState extends State<EarthMapPage> {
   void initState() {
     super.initState();
     logger.i('Initializing EarthMapPage');
-    _addressController.addListener(_onAddressChanged);
   }
 
   @override
   void dispose() {
-    _addressController.dispose();
     _debounceTimer?.cancel();
     super.dispose();
   }
-
-  void _onAddressChanged() {
-    // Debounce the user's typing
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
-      final query = _addressController.text.trim();
-      if (query.isNotEmpty) {
-        final suggestions = await GeocodingService.fetchAddressSuggestions(query);
-        setState(() {
-          _suggestions = suggestions;
-        });
-      } else {
-        setState(() {
-          _suggestions = [];
-        });
-      }
-    });
-  }
+  
 
   Future<void> _onMapCreated(MapboxMap mapboxMap) async {
     try {
@@ -331,27 +309,7 @@ class EarthMapPageState extends State<EarthMapPage> {
     );
   }
 
-  Widget _buildSearchToggleButton() {
-    return Positioned(
-      top: 40,
-      left: 10,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          shape: const CircleBorder(),
-          padding: const EdgeInsets.all(8),
-        ),
-        onPressed: () {
-          setState(() {
-            _showSearchBar = !_showSearchBar;
-            if (!_showSearchBar) {
-              _suggestions.clear();
-            }
-          });
-        },
-        child: const Icon(Icons.search),
-      ),
-    );
-  }
+
 
   Widget _buildTimelineButton() {
     return Positioned(
@@ -469,124 +427,7 @@ class EarthMapPageState extends State<EarthMapPage> {
     );
   }
 
-  Widget _buildAddressSearchWidget() {
-    if (!_showSearchBar) return const SizedBox.shrink();
-
-    return Positioned(
-      top: 140,
-      left: 10,
-      width: 250,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            padding: const EdgeInsets.all(8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _addressController,
-                    decoration: const InputDecoration(
-                      hintText: 'Enter address',
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                ElevatedButton(
-                  onPressed: () async {
-                    final address = _addressController.text.trim();
-                    if (address.isEmpty) return;
-
-                    final coords = await GeocodingService.fetchCoordinatesFromAddress(address);
-                    if (coords != null) {
-                      logger.i('Coordinates received: $coords');
-                      final lat = coords['lat']!;
-                      final lng = coords['lng']!;
-
-                      final geometry = Point(coordinates: Position(lng, lat));
-                      final bytes = await rootBundle.load('assets/icons/cross.png');
-                      final imageData = bytes.buffer.asUint8List();
-
-                      final annotationId = uuid.v4();
-                      final annotation = Annotation(
-                        id: annotationId,
-                        title: address.isNotEmpty ? address : null,
-                        iconName: "cross",
-                        startDate: null,
-                        note: null,
-                        latitude: lat,
-                        longitude: lng,
-                        imagePath: null,
-                        endDate: null,
-                      );
-                      await _localRepo.addAnnotation(annotation);
-                      logger.i('Searched annotation saved to Hive with id: $annotationId');
-
-                      final mapAnnotation = await _annotationsManager.addAnnotation(
-                        geometry,
-                        image: imageData,
-                        title: annotation.title ?? '',
-                        date: annotation.startDate ?? '',
-                      );
-                      logger.i('Annotation placed at searched location.');
-
-                      // Link
-                      _gestureHandler.registerAnnotationId(mapAnnotation.id, annotationId);
-
-                      // Move camera
-                      _mapboxMap.setCamera(
-                        CameraOptions(
-                          center: geometry,
-                          zoom: 14.0,
-                        ),
-                      );
-                    } else {
-                      logger.w('No coordinates found for the given address.');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No coordinates found for the given address.')),
-                      );
-                    }
-                  },
-                  child: const Text('Search'),
-                ),
-              ],
-            ),
-          ),
-          if (_suggestions.isNotEmpty)
-            Container(
-              width: 250,
-              margin: const EdgeInsets.only(top: 4),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _suggestions.map((s) {
-                  return InkWell(
-                    onTap: () {
-                      _addressController.text = s;
-                      _suggestions.clear();
-                      setState(() {});
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(s),
-                    ),
-                  );
-                }).toList(),
-              ),
-            )
-        ],
-      ),
-    );
-  }
-
+  
   Widget _buildConnectModeBanner() {
     if (!_isConnectMode) return const SizedBox.shrink();
 
@@ -730,22 +571,33 @@ class EarthMapPageState extends State<EarthMapPage> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
-              children: [
-                _buildMapWidget(),
-                if (_isMapReady) _buildSearchToggleButton(),
-                if (_isMapReady) _buildTimelineButton(),
-                if (_isMapReady) _buildClearAnnotationsButton(),
-                if (_isMapReady) _buildClearImagesButton(),
-                if (_isMapReady) _buildDeleteImagesFolderButton(),
-                if (_isMapReady) _buildAddressSearchWidget(),
-                if (_isMapReady) _buildAnnotationMenu(),
-                if (_isMapReady) _buildConnectModeBanner(),
-                if (_isMapReady) _buildTimelineCanvas(),
-              ],
+        children: [
+          _buildMapWidget(),
+          if (_isMapReady) ...[
+            _buildTimelineButton(),
+            _buildClearAnnotationsButton(),
+            _buildClearImagesButton(),
+            _buildDeleteImagesFolderButton(),
+
+            // <-- The new search widget
+            EarthMapSearchWidget(
+              mapboxMap: _mapboxMap,
+              annotationsManager: _annotationsManager,
+              gestureHandler: _gestureHandler,
+              localRepo: _localRepo,
+              uuid: uuid,  // you already have this
             ),
+
+            _buildAnnotationMenu(),
+            _buildConnectModeBanner(),
+            _buildTimelineCanvas(),
+          ],
+        ],
+      ),
     );
   }
 }
